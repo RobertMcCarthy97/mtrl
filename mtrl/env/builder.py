@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import mtenv
 from gym.vector.async_vector_env import AsyncVectorEnv
 
-from mtrl.env.vec_env import MetaWorldVecEnv, VecEnv
+from mtrl.env.vec_env import MetaWorldVecEnv, VecEnv, LLMVecEnv
 from mtrl.utils.types import ConfigType
 
 
@@ -74,4 +74,57 @@ def build_metaworld_vec_env(
         context="spawn",
         shared_memory=False,
     )
+    
     return env, env_id_to_task_map
+
+'''
+(Pdb) env_metadata
+{'ids': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 'mode': ['train', 'train', 'train', 'train', 'train', 'train', 'train', 'train', 'train', 'train']}
+
+(Pdb) env_id_to_task_map
+{'reach-v1': Task(env_name='reach-v1', data=......
+
+
+'''
+
+
+def build_llm_vec_env(
+    config: ConfigType,
+    mode: str,
+) -> Tuple[AsyncVectorEnv, Optional[Dict[str, Any]]]:
+    
+    from mtenv.envs.metaworld.wrappers.normalized_env import NormalizedEnvWrapper
+    from llm_curriculum_algo.env_wrappers import make_env
+    
+    def get_func_to_make_envs(single_task_name: str):
+        
+        def _make_env():
+            env = make_env(
+                use_language_goals=config.env.use_language_goals,
+                single_task_names=[single_task_name],
+                high_level_task_names=config.env.high_level_task_names,
+                mtenv_wrapper=True,
+                )
+            env = NormalizedEnvWrapper(env, normalize_reward=True)
+            # TODO: make sure norm env is correct
+            return env
+
+        return _make_env
+    
+    num_tasks = len(config.env.single_task_names)
+    funcs_to_make_envs = [get_func_to_make_envs(single_task_name) for single_task_name in config.env.single_task_names]
+    
+    env_metadata = {
+        "ids": list(range(num_tasks)),
+        "mode": [mode for _ in range(num_tasks)],
+    }
+    env = LLMVecEnv(
+        env_metadata=env_metadata,
+        env_fns=funcs_to_make_envs,
+        context="spawn",
+        shared_memory=False,
+    )
+    
+    assert env.num_envs == num_tasks
+    
+    return env

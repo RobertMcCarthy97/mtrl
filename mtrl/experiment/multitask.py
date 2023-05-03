@@ -15,14 +15,14 @@ from mtrl.utils.types import ConfigType, EnvMetaDataType, EnvsDictType, ListConf
 
 
 class Experiment(experiment.Experiment):
-    def __init__(self, config: ConfigType, experiment_id: str = "0"):
+    def __init__(self, config: ConfigType, experiment_id: str = "0", change_get_metadata=True):
         """Experiment Class to manage the lifecycle of a multi-task model.
 
         Args:
             config (ConfigType):
             experiment_id (str, optional): Defaults to "0".
         """
-        super().__init__(config, experiment_id)
+        super().__init__(config, experiment_id, change_get_metadata=change_get_metadata)
         self.eval_modes_to_env_ids = self.create_eval_modes_to_env_ids()
         self.should_reset_env_manually = False
         self.metrics_to_track = {

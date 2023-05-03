@@ -106,3 +106,56 @@ class MetaWorldVecEnv(AsyncVectorEnv):
 
     def create_multitask_obs(self, env_obs):
         return {"env_obs": torch.tensor(env_obs), "task_obs": self.task_obs}
+    
+    
+class LLMVecEnv(AsyncVectorEnv):
+    def __init__(
+        self,
+        env_metadata: Dict[str, Any],
+        env_fns,
+        observation_space=None,
+        action_space=None,
+        shared_memory=True,
+        copy=True,
+        context=None,
+        daemon=True,
+        worker=None,
+    ):
+        """Return only every `skip`-th frame"""
+        super().__init__(
+            env_fns=env_fns,
+            observation_space=observation_space, # TODO: will observation space differences between Metaworld mtenv and fetch_custom be an issue here?
+            action_space=action_space,
+            shared_memory=shared_memory,
+            copy=copy,
+            context=context,
+            daemon=daemon,
+            worker=worker,
+        )
+        self.num_envs = len(env_fns)
+        assert "mode" in env_metadata
+        assert "ids" in env_metadata
+        self._metadata = env_metadata
+
+    @property
+    def mode(self):
+        return self._metadata["mode"]
+
+    @property
+    def ids(self):
+        return self._metadata["ids"]
+
+    def _check_observation_spaces(self):
+        return
+
+    def reset(self):
+        obs = super().reset()
+        return self.torch_obs(obs)
+
+    def step(self, actions):
+        obs, reward, done, info = super().step(actions)
+        return self.torch_obs(obs), reward, done, info
+
+    def torch_obs(self, obs):
+        return {"env_obs": torch.tensor(obs['env_obs']), "task_obs": torch.tensor(obs['task_obs'])}
+        # TODO: task obs should just be the task indices!!!

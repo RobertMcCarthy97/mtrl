@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 """Class to interface with an Experiment"""
 
-from typing import Dict
+from typing import Any, List, Optional, Tuple, Dict
 
 import hydra
 import numpy as np
@@ -10,14 +10,15 @@ from mtrl.agent import utils as agent_utils
 from mtrl.env import builder as env_builder
 from mtrl.env.vec_env import VecEnv  # type: ignore[attr-defined]
 from mtrl.experiment import multitask
-from mtrl.utils.types import ConfigType
+from mtrl.utils.types import ConfigType, EnvMetaDataType
+from mtrl.env.types import EnvType
 
 
 class Experiment(multitask.Experiment):
     """Experiment Class"""
 
-    def __init__(self, config: ConfigType, experiment_id: str = "0"):
-        super().__init__(config, experiment_id)
+    def __init__(self, config: ConfigType, experiment_id: str = "0", change_get_metadata=True):
+        super().__init__(config, experiment_id, change_get_metadata=change_get_metadata)
         self.should_reset_env_manually = True
 
     def create_eval_modes_to_env_ids(self):
@@ -37,6 +38,10 @@ class Experiment(multitask.Experiment):
                 raise ValueError(
                     f"`{self.config.env.benchmark._target_}` env is not supported by metaworld experiment."
                 )
+        '''
+        (Pdb) eval_modes_to_env_ids
+        {'eval': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]}
+        '''
         return eval_modes_to_env_ids
 
     def build_envs(self):
@@ -65,9 +70,14 @@ class Experiment(multitask.Experiment):
             max_episode_steps=max_episode_steps,
             ordered_task_list=list(env_id_to_task_map.keys()),
         )
+        
+        '''
+        (Pdb) metadata
+        {'env_obs_space': Box(-inf, inf, (12,), float32), 'action_space': Box(-1.0, 1.0, (4,), float32), 'ordered_task_list': ['reach-v1', 'push-v1', 'pick-place-v1', 'door-open-v1', 'drawer-open-v1', 'drawer-close-v1', 'button-press-topdown-v1', 'peg-insert-side-v1', 'window-open-v1', 'window-close-v1'], 'max_episode_steps': 150}
+        '''
         return envs, metadata
 
-    def create_env_id_to_index_map(self) -> Dict[str, int]:
+    def create_env_id_to_index_map(self) -> Dict[str, int]: # function not used?
         env_id_to_index_map: Dict[str, int] = {}
         current_id = 0
         for env in self.envs.values():
@@ -191,3 +201,78 @@ class Experiment(multitask.Experiment):
 
             multitask_obs = next_multitask_obs
             episode_step += 1
+
+
+class LLMExperiment(Experiment):
+    """ Experiment runner for LLM env"""
+    
+    def __init__(self, config: ConfigType, experiment_id: str = "0"):
+        super().__init__(config, experiment_id, change_get_metadata=False)
+        
+    def create_eval_modes_to_env_ids(self):
+        eval_modes_to_env_ids = {}
+        eval_modes = [
+            key for key in self.config.metrics.keys() if not key.startswith("train")
+        ]
+        for mode in eval_modes:
+            eval_modes_to_env_ids[mode] = list(range(self.config.env.num_envs))
+        '''
+        (Pdb) eval_modes_to_env_ids
+        {'eval': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]}
+        '''
+        return eval_modes_to_env_ids
+    
+    def build_envs(self):
+        envs = {}
+        mode = "train"
+        envs[mode] = env_builder.build_llm_vec_env(
+            config=self.config, mode=mode
+        )
+        mode = "eval"
+        envs[mode] = env_builder.build_llm_vec_env(
+            config=self.config,
+            mode=mode,
+        )
+
+        ordered_task_list = self.config.env.single_task_names
+        # TODO: need to verify order of tasks is correct here!!
+        
+        max_episode_steps = 50 # TODO: dodgy to set max steps here???
+        
+        # hardcoding the steps as different environments return different
+        # values for max_path_length. MetaWorld uses 150 as the max length.
+        metadata = self.get_env_metadata(
+            env=envs["train"],
+            max_episode_steps=max_episode_steps,
+            ordered_task_list=ordered_task_list,
+        )
+        
+        '''
+        (Pdb) metadata
+        {'env_obs_space': Box(-inf, inf, (12,), float32), 'action_space': Box(-1.0, 1.0, (4,), float32), 'ordered_task_list': ['reach-v1', 'push-v1', 'pick-place-v1', 'door-open-v1', 'drawer-open-v1', 'drawer-close-v1', 'button-press-topdown-v1', 'peg-insert-side-v1', 'window-open-v1', 'window-close-v1'], 'max_episode_steps': 150}
+        '''
+        return envs, metadata
+    
+    def get_env_metadata(
+        self,
+        env: EnvType,
+        max_episode_steps: Optional[int] = None,
+        ordered_task_list: Optional[List[str]] = None,
+    ) -> EnvMetaDataType:
+        """Method to get the metadata from an environment"""
+        
+        dummy_env = env.env_fns[0]().env
+        metadata: EnvMetaDataType = {
+            "env_obs_space": dummy_env.observation_space['env_obs'],
+            "action_space": dummy_env.action_space,
+            "ordered_task_list": ordered_task_list,
+        }
+        
+        if max_episode_steps is None:
+            metadata["max_episode_steps"] = dummy_env._max_episode_steps
+        else:
+            metadata["max_episode_steps"] = max_episode_steps
+        return metadata
+
+    def create_env_id_to_index_map(self):
+        raise NotImplementedError

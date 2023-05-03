@@ -18,7 +18,7 @@ from mtrl.utils.types import ConfigType, EnvMetaDataType, EnvsDictType
 
 
 class Experiment(checkpointable.Checkpointable):
-    def __init__(self, config: ConfigType, experiment_id: str = "0"):
+    def __init__(self, config: ConfigType, experiment_id: str = "0", change_get_metadata=True):
         """Experiment Class to manage the lifecycle of a model.
 
         Args:
@@ -29,7 +29,8 @@ class Experiment(checkpointable.Checkpointable):
         self.config = config
         self.device = torch.device(self.config.setup.device)
 
-        self.get_env_metadata = get_env_metadata
+        if change_get_metadata:
+            self.get_env_metadata = get_env_metadata
         self.envs, self.env_metadata = self.build_envs()
 
         key = "ordered_task_list"
@@ -59,7 +60,7 @@ class Experiment(checkpointable.Checkpointable):
 
         env_obs_shape = self.env_obs_space.shape
         action_shape = self.action_space.shape
-
+        
         self.config = prepare_config(config=self.config, env_metadata=self.env_metadata)
         self.agent = hydra.utils.instantiate(
             self.config.agent.builder,
