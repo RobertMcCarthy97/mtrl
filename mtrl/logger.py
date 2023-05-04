@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from termcolor import colored
 
+import wandb
 
 @singledispatch
 def serialize_log(val):
@@ -196,7 +197,17 @@ class Logger(object):
             value = value.item()
         mode, key = key.split("/", 1)
         self.mgs[mode].log(key, value, n)
+        
+    def _wandb_log(self, key, step):
+        import pdb; pdb.set_trace()
+        data = self.mgs[key]._prime_meters()
+        data["step"] = step
+        data["mode"] = key
+        wandb.log(data)
+        self.mgs[key]._meters.clear()
 
     def dump(self, step):
         for key in self.mgs:
             self.mgs[key].dump(step, key)
+            if self.config.wandb:
+                self._wandb_log(key, step)
