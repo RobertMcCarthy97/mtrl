@@ -120,6 +120,7 @@ class LLMVecEnv(AsyncVectorEnv):
         context=None,
         daemon=True,
         worker=None,
+        all_task_names=None
     ):
         """Return only every `skip`-th frame"""
         super().__init__(
@@ -157,5 +158,5 @@ class LLMVecEnv(AsyncVectorEnv):
         return self.torch_obs(obs), reward, done, info
 
     def torch_obs(self, obs):
-        return {"env_obs": torch.tensor(obs['env_obs']), "task_obs": torch.tensor(obs['task_obs'])}
-        # TODO: task obs should just be the task indices!!!
+        return {"env_obs": torch.tensor(obs['env_obs']), "task_obs": torch.tensor(obs['task_obs'], dtype=torch.int64)}
+        # TODO: make sure ok to keep task obs as int...

@@ -85,7 +85,7 @@ class ReplayBuffer(object):
         ).float()
         not_dones = torch.as_tensor(self.not_dones[idxs], device=self.device)
         env_indices = torch.as_tensor(self.task_obs[idxs], device=self.device)
-
+        
         return ReplayBufferSample(
             env_obses, actions, rewards, next_env_obses, not_dones, env_indices, idxs
         )

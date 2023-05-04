@@ -59,6 +59,7 @@ class Agent(AbstractAgent):
         self.encoder_tau = encoder_tau
         self.actor_update_freq = actor_update_freq
         self.critic_target_update_freq = critic_target_update_freq
+        
         self.actor = hydra.utils.instantiate(
             actor_cfg, env_obs_shape=env_obs_shape, action_shape=action_shape
         ).to(self.device)
@@ -78,6 +79,7 @@ class Agent(AbstractAgent):
                 ]
             ).to(self.device)
         )
+        
         # self.log_alpha.requires_grad = True
         # set target entropy to -|A|
         self.target_entropy = -np.prod(action_shape)
@@ -363,7 +365,7 @@ class Agent(AbstractAgent):
             kwargs_to_compute_gradient (Dict[str, Any]):
 
         """
-
+        
         # detach encoder, so we don't update it with the actor loss
         mtobs = MTObs(
             env_obs=batch.env_obs,
@@ -413,6 +415,7 @@ class Agent(AbstractAgent):
         self.actor_optimizer.step()
 
         self.log_alpha_optimizer.zero_grad()
+        
         if self.loss_reduction == "mean":
             alpha_loss = (
                 self.get_alpha(batch.task_obs)
@@ -552,7 +555,7 @@ class Agent(AbstractAgent):
                 buffer_index_to_sample is not set to None, return buffer_index_to_sample.
 
         """
-
+        
         if kwargs_to_compute_gradient is None:
             kwargs_to_compute_gradient = {}
 
@@ -560,7 +563,7 @@ class Agent(AbstractAgent):
             batch = replay_buffer.sample()
         else:
             batch = replay_buffer.sample(buffer_index_to_sample)
-
+            
         logger.log("train/batch_reward", batch.reward.mean(), step)
         if self.should_use_task_encoder:
             self.task_encoder_optimizer.zero_grad()
@@ -577,6 +580,7 @@ class Agent(AbstractAgent):
             component_name="critic",
             env_index=batch.task_obs,
         )
+        
         self.update_critic(
             batch=batch,
             task_info=task_info,

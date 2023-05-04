@@ -134,7 +134,7 @@ class Logger(object):
     def __init__(self, log_dir, config, retain_logs: bool = False):
         self._log_dir = log_dir
         self.config = config
-
+        
         if "metaworld" in self.config.env.name:
             num_envs = int(
                 "".join(
@@ -145,6 +145,8 @@ class Logger(object):
                     ]
                 )
             )
+        elif "fetch_custom" in self.config.env.name:
+            num_envs = self.config.env.num_envs
         else:
             env_list: List[str] = []
             for key in self.config.metrics:

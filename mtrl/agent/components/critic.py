@@ -410,6 +410,7 @@ class Critic(base_component.Component):
         task_info = mtobs.task_info
         assert task_info is not None
         # detach_encoder allows to stop gradient propogation to encoder
+        
         if self.should_condition_encoder_on_task_info:
             obs = self.encode(mtobs=mtobs, detach=detach_encoder)
         else:

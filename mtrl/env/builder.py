@@ -96,7 +96,7 @@ def build_llm_vec_env(
     from mtenv.envs.metaworld.wrappers.normalized_env import NormalizedEnvWrapper
     from llm_curriculum_algo.env_wrappers import make_env
     
-    def get_func_to_make_envs(single_task_name: str):
+    def get_func_to_make_envs(single_task_name: str, mtenv_task_idx: int):
         
         def _make_env():
             env = make_env(
@@ -104,6 +104,7 @@ def build_llm_vec_env(
                 single_task_names=[single_task_name],
                 high_level_task_names=config.env.high_level_task_names,
                 mtenv_wrapper=True,
+                mtenv_task_idx=mtenv_task_idx,
                 )
             env = NormalizedEnvWrapper(env, normalize_reward=True)
             # TODO: make sure norm env is correct
@@ -112,7 +113,7 @@ def build_llm_vec_env(
         return _make_env
     
     num_tasks = len(config.env.single_task_names)
-    funcs_to_make_envs = [get_func_to_make_envs(single_task_name) for single_task_name in config.env.single_task_names]
+    funcs_to_make_envs = [get_func_to_make_envs(single_task_name, i) for i, single_task_name in enumerate(config.env.single_task_names)]
     
     env_metadata = {
         "ids": list(range(num_tasks)),

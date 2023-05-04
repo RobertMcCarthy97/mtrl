@@ -221,7 +221,9 @@ class Experiment(experiment.Experiment):
                 )
                 for _ in range(num_updates):
                     self.agent.update(self.replay_buffer, self.logger, step)
+            
             next_multitask_obs, reward, done, info = vec_env.step(action)
+            
             if self.should_reset_env_manually:
                 if (episode_step[0] + 1) % self.max_episode_steps == 0:
                     # we do a +2 because we started the counting from 0 and episode_step is incremented after updating the buffer
@@ -233,6 +235,7 @@ class Experiment(experiment.Experiment):
 
             # allow infinite bootstrap
             for index, env_index in enumerate(env_indices):
+                assert index == env_index, "agent code assumes this is true"
                 done_bool = (
                     0
                     if episode_step[index] + 1 == self.max_episode_steps
