@@ -62,6 +62,7 @@ class Experiment(checkpointable.Checkpointable):
         action_shape = self.action_space.shape
         
         self.config = prepare_config(config=self.config, env_metadata=self.env_metadata)
+        
         self.agent = hydra.utils.instantiate(
             self.config.agent.builder,
             env_obs_shape=env_obs_shape,

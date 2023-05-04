@@ -158,5 +158,6 @@ class LLMVecEnv(AsyncVectorEnv):
         return self.torch_obs(obs), reward, done, info
 
     def torch_obs(self, obs):
-        return {"env_obs": torch.tensor(obs['env_obs']), "task_obs": torch.tensor(obs['task_obs'], dtype=torch.int64)}
+        task_obs = torch.tensor(obs['task_obs'], dtype=torch.int64).squeeze() # expects single dimension in shape
+        return {"env_obs": torch.tensor(obs['env_obs']), "task_obs": task_obs}
         # TODO: make sure ok to keep task obs as int...
