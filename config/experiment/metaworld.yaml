@@ -17,6 +17,10 @@ save:
     should_save: True
     size_per_chunk: 10000
     num_samples_to_save: -1 # number of samples to save. Set to -1 to save all samples
+  wandb:
+    use_wandb: False
+    group: temp
+    name: temp
 save_dir: ${setup.save_dir}
 save_video: False
 envs_to_exclude_during_training:
