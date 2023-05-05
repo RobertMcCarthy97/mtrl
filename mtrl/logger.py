@@ -65,13 +65,14 @@ class CurrentMeter(Meter):
 
 
 class MetersGroup(object):
-    def __init__(self, file_name, formating, mode: str, retain_logs: bool):
+    def __init__(self, file_name, formating, mode: str, retain_logs: bool, use_wandb: bool = False):
         self._file_name = file_name
         self._mode = mode
         if not retain_logs:
             if os.path.exists(file_name):
                 os.remove(file_name)
         self._formating = formating
+        self._use_wandb = use_wandb
         self._meters: Dict[str, Meter] = {}
 
     def log(self, key, value, n=1):
@@ -120,6 +121,9 @@ class MetersGroup(object):
                 if disp_key is not None:
                     pieces.append(self._format(disp_key, value, ty))
         print("| %s" % (" | ".join(pieces)))
+        
+    def _dump_wandb(self, data):
+        wandb.log(data)
 
     def dump(self, step, prefix):
         if len(self._meters) == 0:
@@ -128,6 +132,8 @@ class MetersGroup(object):
         data["step"] = step
         self._dump_to_file(data)
         self._dump_to_console(data, prefix)
+        if self._use_wandb:
+            self._dump_wandb(data)
         self._meters.clear()
 
 
@@ -187,9 +193,11 @@ class Logger(object):
                 formating=_get_formatting(current_formatting=value),
                 mode=key,
                 retain_logs=retain_logs,
+                use_wandb=self.config.experiment.save.wandb.use_wandb,
             )
             for key, value in self.config.metrics.items()
         }
+        # self.mgs.keys() = ['train', 'eval']
 
     def log(self, key, value, step, n=1):
         assert key.startswith("train") or key.startswith("eval")
@@ -197,17 +205,7 @@ class Logger(object):
             value = value.item()
         mode, key = key.split("/", 1)
         self.mgs[mode].log(key, value, n)
-        
-    def _wandb_log(self, key, step):
-        import pdb; pdb.set_trace()
-        data = self.mgs[key]._prime_meters()
-        data["step"] = step
-        data["mode"] = key
-        wandb.log(data)
-        self.mgs[key]._meters.clear()
 
     def dump(self, step):
         for key in self.mgs:
             self.mgs[key].dump(step, key)
-            if self.config.wandb:
-                self._wandb_log(key, step)

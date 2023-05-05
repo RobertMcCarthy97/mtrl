@@ -102,7 +102,7 @@ def build_llm_vec_env(
             env = make_env(
                 manual_decompose_p=config.env.manual_decompose_p,
                 dense_rew_lowest=config.env.dense_rew_lowest,
-                render_mode=None,
+                render_mode=config.env.render_mode,
                 max_ep_len=config.env.max_ep_len,
                 contained_sequence=config.env.contained_sequence,
                 state_obs_only=False,    

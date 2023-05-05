@@ -237,7 +237,7 @@ class LLMExperiment(Experiment):
         ordered_task_list = self.config.env.single_task_names
         # TODO: need to verify order of tasks is correct here!!
         
-        max_episode_steps = 50 # TODO: dodgy to set max steps here???
+        max_episode_steps = self.config.env.max_ep_len # TODO: dodgy to set max steps here???
         
         # hardcoding the steps as different environments return different
         # values for max_path_length. MetaWorld uses 150 as the max length.
@@ -261,7 +261,7 @@ class LLMExperiment(Experiment):
     ) -> EnvMetaDataType:
         """Method to get the metadata from an environment"""
         
-        dummy_env = env.env_fns[0]().env
+        dummy_env = env.env_fns[0]() # TODO: warning if normalized env?
         metadata: EnvMetaDataType = {
             "env_obs_space": dummy_env.observation_space['env_obs'],
             "action_space": dummy_env.action_space,

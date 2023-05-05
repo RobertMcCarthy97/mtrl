@@ -147,6 +147,8 @@ class Experiment(experiment.Experiment):
 
         multitask_obs = vec_env.reset()  # (num_envs, 9, 84, 84)
         env_indices = multitask_obs["task_obs"]
+        if len(env_indices.shape) == 0:
+            env_indices = env_indices.unsqueeze(0) # can't iterate through otherwise
 
         train_mode = ["train" for _ in range(vec_env.num_envs)]
 
