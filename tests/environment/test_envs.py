@@ -95,3 +95,49 @@ def test_metaworld_env_MT(env, mode) -> None:
         assert action.shape == (num_envs, 4)
         assert "success" in info[0]
         env.close()
+
+
+def test_fetch_custom_env(single_task_names=['pick_up_cube', 'lift_cube']):
+    with initialize(config_path="../../config"):
+        # config is relative to a modules
+        config = compose(
+            config_name="config_fetch",
+            overrides=["env=fetch_custom", f"experiment.num_eval_episodes=2", "env.single_task_names=['pick_up_cube', 'lift_cube']", f"env.num_envs={len(single_task_names)}"],
+        )
+        
+        envs = {}
+        mode = "train"
+        envs[mode] = env_builder.build_llm_vec_env(
+            config=config, mode=mode
+        )
+        mode = "eval"
+        envs[mode] = env_builder.build_llm_vec_env(
+            config=config,
+            mode=mode,
+        )
+        
+        env = envs["train"]
+        
+        env.reset()
+        num_envs = len(single_task_names)
+        action = np.concatenate(
+            [np.expand_dims(x, 0) for x in env.action_space.sample()]
+        )
+        
+        # TODO: check max steps
+        for i in range(50):
+            mtobs, reward, done, info = env.step(action)
+            assert mtobs["env_obs"].shape == (num_envs, 28)
+            assert action.shape == (num_envs, 4)
+            assert reward.shape == (num_envs,)
+            assert done.shape == (num_envs,)
+            assert "success" in info[0]
+            for i in range(num_envs):
+                print(reward[i])
+                assert (reward[i] == 0) or (reward[i] == -1)
+                if info[i]["success"]:
+                    assert reward[i] == 0
+                else:
+                    (reward[i] == -1)
+            
+        env.close()
