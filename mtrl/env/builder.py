@@ -58,7 +58,7 @@ def build_metaworld_vec_env(
         "benchmark_name": benchmark_name,
         "env_id_to_task_map": env_id_to_task_map,
         "num_copies_per_env": 1,
-        "should_perform_reward_normalization": True,
+        "should_perform_reward_normalization": True, # only norms reward, not obs
     }
 
     funcs_to_make_envs, env_id_to_task_map = get_list_of_func_to_make_metaworld_envs(
@@ -100,14 +100,21 @@ def build_llm_vec_env(
         
         def _make_env():
             env = make_env(
+                manual_decompose_p=config.env.manual_decompose_p,
+                dense_rew_lowest=config.env.dense_rew_lowest,
+                render_mode=None,
+                max_ep_len=config.env.max_ep_len,
+                contained_sequence=config.env.contained_sequence,
+                state_obs_only=False,    
                 use_language_goals=config.env.use_language_goals,
                 single_task_names=[single_task_name],
                 high_level_task_names=config.env.high_level_task_names,
                 mtenv_wrapper=True,
                 mtenv_task_idx=mtenv_task_idx,
                 )
-            env = NormalizedEnvWrapper(env, normalize_reward=True)
-            # TODO: make sure norm env is correct
+            if config.env.use_default_norm_wrapper:
+                env = NormalizedEnvWrapper(env, normalize_reward=True) # TODO: make sure norm env is correct
+                
             return env
 
         return _make_env
